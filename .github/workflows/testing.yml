@@ -69,9 +69,7 @@ jobs:
     - name: Clone Anykernel3
       run: |
             git clone --depth=1 https://github.com/malkist02/anykernel3 -b main AnyKernel3 
-            cp out/arch/arm64/boot/Image.gz AnyKernel3/Image.gz
-            cp out/arch/arm64/boot/dtbo.img AnyKernel3/dtbo.img
-            cp out/arch/arm64/boot/dtb.img AnyKernel3/dtb.img
+            cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/Image.gz-dtb
             cd AnyKernel3
             zip -r "../Teletubies-K4.19-mido-${{ env.BUILD_TIME }}.zip" *
 
