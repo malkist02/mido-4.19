@@ -8,14 +8,9 @@ on:
           required: true
           default: 'vendor/akari.config'
       ksu_config:
-          description: 'kernel config target'
+          description: 'ksu config'
           required: true
           default: 'vendor/ksu.config'          
-      kernelname:
-          description: 'Kernel name'
-          required: true
-          default: 'Teletubies'
-
 
 jobs:
   build:
@@ -50,7 +45,7 @@ jobs:
           chmod a+x antman
           ./antman -S
           ./antman --patch=glibc
-      # 4. Set environment variables
+          
       - name: Export build vars
         run: |
           export KERNEL_DIR=$PWD
@@ -79,13 +74,16 @@ jobs:
           mkdir -p out
           make O=out vendor/msm8953-perf_defconfig $KSU_CONFIG $CONFIG
           make -j$(nproc --all) O=out \
+     
       - name: Clone Anykernel3
         run: |
           git clone --depth=1 https://github.com/malkist02/anykernel3 -b main AnyKernel3 
           cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/Image.gz-dtb
           cd AnyKernel3
           zip -r "../Teletubies-K4.19-mido-${{ env.BUILD_TIME }}.zip" *
+          
       - name: Upload Flashable zip
-        uses: actions/upload-artifact@vvariable with:
-        name: Teletubies-K4.19-mido-${{ env.BUILD_TIME }}
-        path: AnyKernel3/*
+        uses: actions/upload-artifact@v4
+        with:
+           name: Teletubies-K4.19-mido-${{ env.BUILD_TIME }}
+           path: AnyKernel3/*
