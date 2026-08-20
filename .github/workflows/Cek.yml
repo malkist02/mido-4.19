@@ -1,0 +1,74 @@
+name: Build Kernel mido
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Kernel
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set Timezone
+      run: |
+        sudo rm /etc/localtime
+        sudo ln -s /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
+
+    - name: Install Dependencies
+      run: |
+        sudo apt update -y
+        sudo apt install bc cpio flex bison aptitude git python-is-python3 tar aria2 perl wget curl lz4 libssl-dev -y
+
+    - name: Clone Toolchains
+      run: |
+        mkdir clang && cd clang
+        curl -LO "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman"
+        chmod a+x antman
+        ./antman -S
+        ./antman --patch=glibc
+        cd ..
+        git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9 gcc64
+        git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9 gcc32
+
+    - name: Setup Environment Variables
+      run: |
+        echo "BUILD_TIME=$(TZ=Asia/Jakarta date '+%d-%m-%Y')" >> $GITHUB_ENV
+        echo "CLANG_PATH=$GITHUB_WORKSPACE/clang" >> $GITHUB_ENV
+        echo "GCC64_PATH=$GITHUB_WORKSPACE/gcc64" >> $GITHUB_ENV
+        echo "GCC32_PATH=$GITHUB_WORKSPACE/gcc32" >> $GITHUB_ENV
+
+    - name: Clone SUKISU
+      run: |
+        curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s main
+
+    - name: Set Build Start Time
+      run: echo "BUILD_START=$(date +%s)" >> $GITHUB_ENV
+
+    - name: Build Kernel
+      run: |
+        export ARCH=arm64
+        export PATH="$CLANG_PATH/bin:$GCC64_PATH/bin:$GCC32_PATH/bin:$PATH"
+        export KBUILD_BUILD_USER=Malkist
+        export KBUILD_BUILD_HOST=Android
+        export KBUILD_COMPILER_STRING="$($CLANG_PATH/bin/clang --version | head -n 1)"
+        make O=out ARCH=arm64 vendor/msm8953-perf_defconfig vendor/ksu.config vendor/akari.config
+        make -j$(nproc) O=out ARCH=arm64 LLVM=1 LLVM_IAS=1 CC=clang \
+          CLANG_TRIPLE=aarch64-linux-gnu- \
+          CROSS_COMPILE=$GCC64_PATH/bin/aarch64-elf- \
+          CROSS_COMPILE_ARM32=$GCC32_PATH/bin/arm-eabi-
+          
+    - name: Clone Anykernel3
+      run: |
+          git clone --depth=1 https://github.com/malkist02/anykernel3 -b main AnyKernel3 
+          cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/Image.gz-dtb
+          cd AnyKernel3
+          zip -r "../Teletubies-K4.19-mido-${{ env.BUILD_TIME }}.zip" *
+          
+    - name: Upload Flashable zip
+      uses: actions/upload-artifact@v4
+      with:
+           name: Teletubies-K4.19-mido-${{ env.BUILD_TIME }}
+           path: AnyKernel3/*
