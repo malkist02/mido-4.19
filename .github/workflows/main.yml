@@ -8,6 +8,10 @@ jobs:
     name: Build Kernel
     runs-on: ubuntu-latest
 
+    env:
+      TELEGRAM_BOT_TOKEN: 8691384652:AAHbKtOpbMp-Kc9JvKyil4aPsMfo5hdA-F8
+      TELEGRAM_CHAT_ID: -5173179904
+      
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
@@ -73,3 +77,11 @@ jobs:
       with:
            name: Teletubies-K4.19-mido-${{ env.BUILD_TIME }}
            path: AnyKernel3/*
+           
+    - name: Send to Telegram
+      run: |
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
+          -F chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+          -F message_thread_id=120979 \
+          -F document=@"Teletubies-K4.19-mido-${{ env.BUILD_TIME }}.zip" \
+          -F caption=" Last Version is Cumming "
